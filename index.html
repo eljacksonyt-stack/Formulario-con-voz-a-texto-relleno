@@ -1,62 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>OCR Demo Mejorado</title>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #preview { max-width: 300px; margin-top: 10px; }
-    textarea { width: 100%; height: 150px; margin-top: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario con Dictado</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 350px; }
+        .titulo { text-align: center; color: #333; margin-bottom: 20px; }
+        
+        .fila { margin-bottom: 15px; }
+        .fila label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        
+        .input-group { display: flex; align-items: center; gap: 8px; }
+        
+        input { 
+            flex: 1; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            outline: none;
+        }
+        input:focus { border-color: #007bff; }
+
+        /* Botón de micrófono estilo Google */
+        .btn-mic {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .btn-mic:hover { background: #f0f0f0; }
+        
+        /* Estado grabando */
+        .btn-mic.grabando {
+            background: #ffebee;
+            color: #d32f2f;
+            border-color: #d32f2f;
+            animation: pulso 1.5s infinite;
+        }
+
+        @keyframes pulso {
+            0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+        }
+
+        button.guardar {
+            width: 100%; padding: 12px; background: #007bff; color: white; border: none; 
+            border-radius: 5px; font-size: 16px; margin-top: 10px; cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h2>OCR INE – Versión Mejorada</h2>
 
-  <input type="file" id="fileInput" accept="image/*">
-  <br>
-  <img id="preview">
+<div class="card">
+    <h3 class="titulo">Registro de Voz</h3>
 
-  <textarea id="output" placeholder="Texto OCR aquí..."></textarea>
+    <div class="fila">
+        <label>Nombre:</label>
+        <div class="input-group">
+            <input type="text" id="nombre" placeholder="Tu nombre...">
+            <button class="btn-mic" onclick="grabar('nombre', this)">🎙️</button>
+        </div>
+    </div>
 
-  <script>
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('preview');
-    const output = document.getElementById('output');
+    <div class="fila">
+        <label>Edad:</label>
+        <div class="input-group">
+            <input type="number" id="edad" placeholder="00">
+            <button class="btn-mic" onclick="grabar('edad', this)">🎙️</button>
+        </div>
+    </div>
 
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files[0];
-      preview.src = URL.createObjectURL(file);
+    <div class="fila">
+        <label>Sexo:</label>
+        <div class="input-group">
+            <input type="text" id="sexo" placeholder="M / F">
+            <button class="btn-mic" onclick="grabar('sexo', this)">🎙️</button>
+        </div>
+    </div>
 
-      const img = await createImageBitmap(file);
-      const canvas = new OffscreenCanvas(img.width, img.height);
-      const ctx = canvas.getContext('2d');
+    <div class="fila">
+        <label>Nacionalidad:</label>
+        <div class="input-group">
+            <input type="text" id="nacionalidad" placeholder="País...">
+            <button class="btn-mic" onclick="grabar('nacionalidad', this)">🎙️</button>
+        </div>
+    </div>
 
-      // Preprocesamiento suave: escala gris + contraste
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        let avg = (data[i] + data[i+1] + data[i+2]) / 3;
-        avg = avg > 120 ? 255 : 0;
-        data[i] = data[i+1] = data[i+2] = avg;
-      }
-      ctx.putImageData(imageData, 0, 0);
+    <div class="fila">
+        <label>Fecha de Nacimiento:</label>
+        <div class="input-group">
+            <input type="text" id="fecha" placeholder="Ej: 26 de Noviembre...">
+            <button class="btn-mic" onclick="grabar('fecha', this)">🎙️</button>
+        </div>
+    </div>
 
-      const processedBlob = await canvas.convertToBlob();
+    <button class="guardar">Guardar Registro</button>
+</div>
 
-      const worker = await Tesseract.createWorker("spa", 1, {
-        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",
-        preserve_interword_spaces: "1",
-        load_system_dawg: "F",
-        load_freq_dawg: "F"
-      });
+<script>
+    function grabar(idInput, boton) {
+        // Validación de compatibilidad
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Tu navegador no soporta dictado de voz. Prueba Chrome o Edge.");
+            return;
+        }
 
-      const { data: { text } } = await worker.recognize(processedBlob);
-      await worker.terminate();
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const reconocimiento = new SpeechRecognition();
 
-      output.value = text;
-    });
-  </script>
+        reconocimiento.lang = "es-MX"; // Español México
+        reconocimiento.interimResults = false;
+
+        // Feedback visual
+        boton.classList.add('grabando');
+
+        reconocimiento.onresult = (event) => {
+            const texto = event.results[0][0].transcript;
+            let input = document.getElementById(idInput);
+            
+            // Lógica simple para limpiar edad si el usuario dice "tengo 30 años"
+            if(idInput === 'edad') {
+                input.value = texto.replace(/\D/g,''); // Deja solo números
+            } else {
+                input.value = texto; // Texto normal
+            }
+        };
+
+        reconocimiento.onspeechend = () => {
+            reconocimiento.stop();
+            boton.classList.remove('grabando');
+        };
+
+        reconocimiento.onerror = (event) => {
+            console.error("Error:", event.error);
+            boton.classList.remove('grabando');
+            if(event.error === 'not-allowed') {
+                alert("Permiso de micrófono denegado. Revisa la configuración del navegador.");
+            }
+        };
+
+        reconocimiento.start();
+    }
+</script>
+
 </body>
 </html>
